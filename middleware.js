@@ -51,13 +51,14 @@ export const middleware = async (nextRequest) => {
     const bucket = nextRequest.cookies.get(abCookieName) || getBucket();
 
     if (bucket) {
-      //Check path\
+      //Check path
       if (pathname.startsWith("/_next")) return response;
 
       let path = `${origin}/${bucket}${pathname}`;
-      console.log("Checking Path:", path);
+      console.log(path);
+
       const res = await fetch(`${path}?check=true`, { method: "HEAD" });
-      console.log("status", res.status);
+
       if (res.status < 400) {
         console.log("Path Found");
         return NextResponse.rewrite(path);
@@ -65,6 +66,7 @@ export const middleware = async (nextRequest) => {
         console.log("Path not found");
       }
     }
+
     return response;
   } catch (error) {
     console.log(error);
