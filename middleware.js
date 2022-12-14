@@ -55,7 +55,9 @@ export const middleware = async (nextRequest) => {
 
       let path = `${origin}/${bucket}${pathname}`;
       console.log("Checking Path:", path);
+
       const res = await fetch(`${path}?check=true`, { method: "HEAD" });
+
       console.log("status", res.status);
       if (res.status < 400) {
         console.log("Path Found");
