@@ -1,49 +1,66 @@
-import { MiddlewareRequest } from "@netlify/next";
-const abCookieName = JSON.parse(Deno.env.get("AB_COOKIE_NAME") || "null");
+import { NextResponse } from "next/server";
+
+const abCookieName = Deno.env.get("AB_COOKIE_NAME");
 const testBuckets = JSON.parse(Deno.env.get("AB_TEST_BUCKETS") || "null");
 
 export const middleware = async (nextRequest) => {
-  //If environment variable not set return standard page
-  if (!testBuckets || !abCookieName) {
-    return nextRequest.next();
-  }
+  try {
+    const pathname = nextRequest.nextUrl.pathname;
+    const origin = nextRequest.nextUrl.origin;
 
-  //Ensure weighting adds up
-  let totalWeighting = testBuckets.reduce(
-    (tot, bucket) => tot + bucket.weighting,
-    0
-  );
-  let weightingMultiplier = totalWeighting == 1 ? 1 : 1 / totalWeighting;
+    const response = NextResponse.next();
 
-  //AB Test cookie setup
-  const bucket = nextRequest.cookies.get(abCookieName) || getBucket();
+    const check = nextRequest.nextUrl.searchParams.get("check");
 
-  const getBucket = () => {
-    let newBucket;
-    let randomNumber = Math.random();
-    let totalWeighting = 0;
-    buckets.forEach((b) => {
-      if (
-        totalWeighting <= randomNumber &&
-        randomNumber <= totalWeighting + b.weighting * weightingMultiplier
-      ) {
-        newBucket = b.name;
-      }
-      totalWeighting += b.weighting * weightingMultiplier;
-    });
-
-    nextRequest.cookies.set(abCookieName, newBucket);
-    return newBucket;
-  };
-  console.log("bucket", bucket);
-
-  if (bucket) {
-    //Check path
-    let path = `${nextRequest.nextUrl}/${bucket}/${nextRequest.nextUrl.pathname}`;
-    console.log(nextRequest);
-    //let res = await fetch(path);
-    if (res.status < 400) {
-      nextRequestRequest.rewrite(path);
+    if (check) {
+      return response;
     }
+
+    //If environment variable not set return standard page
+    if (!testBuckets || !abCookieName) {
+      return response;
+    }
+
+    let totalWeighting = testBuckets.reduce(
+      (tot, bucket) => tot + bucket.weighting,
+      0
+    );
+    let weightingMultiplier = totalWeighting == 1 ? 1 : 1 / totalWeighting;
+
+    const getBucket = () => {
+      let newBucket;
+      let randomNumber = Math.random();
+      let totalWeighting = 0;
+      testBuckets.forEach((b) => {
+        if (
+          totalWeighting <= randomNumber &&
+          randomNumber <= totalWeighting + b.weighting * weightingMultiplier
+        ) {
+          newBucket = b.name;
+        }
+        totalWeighting += b.weighting * weightingMultiplier;
+      });
+
+      response.cookies.set(abCookieName, newBucket);
+
+      return newBucket;
+    };
+
+    //AB Test cookie setup
+    const bucket = nextRequest.cookies.get(abCookieName) || getBucket();
+
+    if (bucket) {
+      //Check path\
+      if (pathname.startsWith("/_next")) return;
+
+      let path = `${origin}/${bucket}${pathname}`;
+      const res = await fetch(`${path}?check=true`, { method: "HEAD" });
+      if (res.status < 400) {
+        return NextResponse.rewrite(path);
+      }
+    }
+    return response;
+  } catch (error) {
+    console.log(error);
   }
 };
