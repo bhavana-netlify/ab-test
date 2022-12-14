@@ -54,8 +54,12 @@ export const middleware = async (nextRequest) => {
       //Check path
       if (pathname.startsWith("/_next")) return response;
 
-      let path = `${origin}/${bucket}${pathname}`;
+      let path =
+        pathname === "/"
+          ? `${origin}/${bucket}`
+          : `${origin}/${bucket}${pathname}`;
       console.log(path);
+      console.log(pathname);
 
       const res = await fetch(`${path}?check=true`, { method: "HEAD" });
 
