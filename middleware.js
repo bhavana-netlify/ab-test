@@ -49,8 +49,9 @@ export const middleware = async (nextRequest) => {
 
     //AB Test cookie setup
     const bucket = nextRequest.cookies.get(abCookieName) || getBucket();
-
+    console.log(bucket);
     if (bucket) {
+
       //Check path
       if (pathname.startsWith("/_next")) return response;
 
